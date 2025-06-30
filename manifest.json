@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Phishing Guard",
+  "version": "0.1.0",
+  "description": "Phishing Analysing Extension",
+
+  "permissions": ["tabs", "storage"],
+  "host_permissions": ["<all_urls>"],
+
+  "background": {
+    "service_worker": "src/background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_icon": {
+      "16": "icons/loading.png",
+      "32": "icons/loading.png",
+      "48": "icons/loading.png",
+      "128": "icons/loading.png"
+    },
+    "default_title": "Analysing..."
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/loading.png",
+        "icons/safe.png",
+        "icons/unsafe.png",
+        "icons/close.png",
+        "src/model.json",
+        "config/whitelist.json"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
