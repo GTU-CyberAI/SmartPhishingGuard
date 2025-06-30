@@ -47,7 +47,7 @@ The extension also uses a whitelist for trusted domains to reduce false positive
 | `src/model.json`        | Pre-trained machine learning model                             | `type`, `coefficients`, `trees`                      |
 | `config/whitelist.json` | Trusted domain whitelist to skip known safe sites              | List of domains                                      |
 | `icons/`                | Visual icons for status indicators                             | `loading.png`, `safe.png`, `unsafe.png`, `close.png` |
-| `tests/`                | Placeholder for future testing scripts                         | –                                                    |
+| `tests/`                | Tests                         |                                                     |
 
 _All code includes clear comments explaining functionality, inputs, outputs, and limitations._
 
