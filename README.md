@@ -16,16 +16,13 @@ The extension also uses a whitelist for trusted domains to reduce false positive
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-forked-repo-url>
-   cd <project-folder>
-
-## 🛠️ Installation
-
+   git clone <git clone https://github.com/meteahmetyakar/SmartPhishingGuard.git>
+   cd <SmartPhishingGuard>
 2. **Load the extension in Chrome:**
-1. Navigate to `chrome://extensions/`
-2. Enable **Developer Mode**
-3. Click **Load unpacked**
-4. Select the project folder
+   * Navigate to `chrome://extensions/`
+   * Enable **Developer Mode**
+   * Click **Load unpacked**
+   * Select the project folder
 
 ---
 
@@ -47,7 +44,7 @@ The extension also uses a whitelist for trusted domains to reduce false positive
 | `manifest.json`         | Chrome extension configuration                                 | Permissions, scripts, icons                          |
 | `src/background.js`     | Main logic for detection, feature extraction, ML prediction    | `classify()`, `tryDetect()`, feature extractors      |
 | `src/content.js`        | Injected script for DOM feature collection and UI panel control| `extractDomFeatures()`                               |
-| `src/model.json`        | Pre-trained machine learning model (Logistic Regression or RF) | `type`, `coefficients`, `trees`                      |
+| `src/model.json`        | Pre-trained machine learning model                             | `type`, `coefficients`, `trees`                      |
 | `config/whitelist.json` | Trusted domain whitelist to skip known safe sites              | List of domains                                      |
 | `icons/`                | Visual icons for status indicators                             | `loading.png`, `safe.png`, `unsafe.png`, `close.png` |
 | `tests/`                | Placeholder for future testing scripts                         | –                                                    |
@@ -69,16 +66,8 @@ _All code includes clear comments explaining functionality, inputs, outputs, and
 
 ## 🤝 Acknowledgments
 
-- **Course:** Web Security & Browser Extensions  
-- **Instructor:** [Instructor Name]  
-- **Contributors:** [Your Name]  
+- **Course:** Network And Information Security
+- **Instructor:** Salih Sarp  
+- **Contributors:** Mete Ahmet Yakar  
 
----
-
-## 📤 Submission Checklist
-
-- ✅ All relevant files are pushed  
-- ✅ Files are properly organized and clearly named  
-- ✅ README includes all required sections  
-- ✅ Code is well-commented and explained  
-- ✅ The extension runs successfully in Chrome  
+--- 
