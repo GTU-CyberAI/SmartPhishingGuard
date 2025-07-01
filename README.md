@@ -71,3 +71,13 @@ _All code includes clear comments explaining functionality, inputs, outputs, and
 - **Contributors:** Mete Ahmet Yakar  
 
 --- 
+
+## 📸 Screenshots
+
+- **Phishing Website**
+<img src="https://github.com/meteahmetyakar/SmartPhishingGuard/blob/main/images/phishing-website.png"/>
+
+- **Safe Website**
+<img src="https://github.com/meteahmetyakar/SmartPhishingGuard/blob/main/images/safe-website.png"/>
+
+---
