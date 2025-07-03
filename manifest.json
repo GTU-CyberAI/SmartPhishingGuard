@@ -2,33 +2,23 @@
   "manifest_version": 3,
   "name": "Smart Phishing Guard",
   "version": "0.1.0",
-  "description": "Phishing Analysing Extension",
-
+  "description": "Phishing analysis badge + sliding detail panel demo",
   "permissions": ["tabs", "storage"],
   "host_permissions": ["<all_urls>"],
-
   "background": {
-    "service_worker": "src/background.js"
+    "service_worker": "background.js"
   },
-
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/content.js"],
+      "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],
-
   "action": {
-    "default_icon": {
-      "16": "icons/loading.png",
-      "32": "icons/loading.png",
-      "48": "icons/loading.png",
-      "128": "icons/loading.png"
-    },
-    "default_title": "Analysing..."
+    "default_icon": "icons/loading.png",
+    "default_title": "Analyzing..."
   },
-
   "web_accessible_resources": [
     {
       "resources": [
@@ -36,8 +26,8 @@
         "icons/safe.png",
         "icons/unsafe.png",
         "icons/close.png",
-        "src/model.json",
-        "config/whitelist.json"
+        "model.json",
+        "whitelist.json"
       ],
       "matches": ["<all_urls>"]
     }
