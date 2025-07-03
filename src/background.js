@@ -1,6 +1,8 @@
+// background.js
+
 /* ---------------- Smart Phishing Guard – background.js ---------------- */
 
-/* 0)  ICONS & basic UI helpers */
+/* 0) ICONS & basic UI helpers */
 const ICON_PATHS = {
   loading: "icons/loading.png",
   safe:    "icons/safe.png",
@@ -11,7 +13,7 @@ function updateUI(tabId, status) {
   chrome.action.setIcon({ tabId, path: ICON_PATHS[status] });
   chrome.action.setTitle({
     tabId,
-    title: status === "safe" ? "Safe Website" : "Phishing Website"
+    title: status === "safe" ? "Site Safe" : "Site Unsafe"
   });
 }
 
@@ -20,6 +22,13 @@ const whitelistPromise = fetch(chrome.runtime.getURL("whitelist.json"))
   .then(r => r.json())
   .then(arr => new Set(arr.map(d => d.toLowerCase())))
   .catch(() => new Set());
+
+/* Helper: get root domain (eTLD+1) */
+function getRootDomain(hostname) {
+  const parts = hostname.split('.');
+  if (parts.length <= 2) return hostname;
+  return parts.slice(parts.length - 2).join('.');
+}
 
 /* 1) MODEL load */
 const modelPromise = fetch(chrome.runtime.getURL("model.json"))
@@ -30,25 +39,30 @@ const modelPromise = fetch(chrome.runtime.getURL("model.json"))
 const sigmoid = x => 1 / (1 + Math.exp(-x));
 function predictLR(model, vec) {
   let z = model.intercept;
-  for (let i = 0; i < model.coefficients.length; i++) z += model.coefficients[i] * vec[i];
+  for (let i = 0; i < model.coefficients.length; i++) {
+    z += model.coefficients[i] * vec[i];
+  }
   return sigmoid(z) >= (model.threshold ?? 0.5) ? "unsafe" : "safe";
 }
 
-/* Random-Forest utils */
+/* 3) Random-Forest utils */
 function predictRF(model, featObj) {
   const feats = model.columns.map(k => featObj[k] ?? 0);
   const scoreTree = nodes => {
     let i = 0, n;
-    while (!(n = nodes[i]).leaf)
+    while (!(n = nodes[i]).leaf) {
       i = feats[n.f] <= n.th ? n.l : n.r;
+    }
     return n.val;
   };
   let vote = 0;
-  for (const nodes of model.trees) vote += scoreTree(nodes);
+  for (const nodes of model.trees) {
+    vote += scoreTree(nodes);
+  }
   return vote > (model.threshold ?? 0) ? "unsafe" : "safe";
 }
 
-/* Choose classifier */
+/* 4) Choose classifier */
 async function classify(featObj) {
   const m = await modelPromise;
   if (!m) return "safe";
@@ -57,7 +71,7 @@ async function classify(featObj) {
     : predictLR(m, FEATURE_ORDER.map(k => featObj[k] ?? 0));
 }
 
-/* 30 URL+DOM feature order (for LR path) */
+/* 5) 30 URL+DOM feature order (for LR path) */
 const FEATURE_ORDER = [
   "url_len","has_ip","is_shortened","has_at","dbl_slash","dash_in_domain",
   "subdomain_lvl","https_token","https_valid","num_dots","num_hyphens",
@@ -68,7 +82,7 @@ const FEATURE_ORDER = [
   "num_imgs","num_hlinks","num_iframes"
 ];
 
-/* URL feature extractor */
+/* 6) URL feature extractor */
 const SHORTENERS = /bit\.ly|t\.co|goo\.gl|tinyurl\.com|is\.gd|ow\.ly|buff\.ly|bitly\.com/i;
 function extractUrlFeatures(rawUrl) {
   const u = new URL(rawUrl);
@@ -93,57 +107,64 @@ function extractUrlFeatures(rawUrl) {
     path_level: u.pathname.split("/").filter(Boolean).length,
     query_length: u.search.length,
     fragment_length: u.hash.length,
-    __host: host                       // whitelist için
+    __host: host
   };
 }
 
-/* Explain reasons */
+/* 7) Explain reasons */
 function explainReasons(f) {
   const r = [];
-  if (f.url_len > 75)        r.push(`URL is too long (${f.url_len})`);
+  if (f.url_len > 75)        r.push(`URL is very long (${f.url_len})`);
   if (f.has_ip)              r.push("URL contains IP address");
   if (f.is_shortened)        r.push("Shortened URL service");
   if (f.num_ampersand > 4)   r.push("Too many '&' parameters");
   if (f.form_cnt > 0)        r.push(`${f.form_cnt} suspicious form(s)`);
   if (f.kw_score > 0)        r.push("Phishing keywords detected");
-  if (f.ext_res_ratio > .7)  r.push("High ratio of external resources");
+  if (f.ext_res_ratio > .7)  r.push("High external resource ratio");
   if (f.iframe_flag)         r.push("Uses <iframe>");
-  if (f.onmouseover_flag)    r.push("onmouseover events detected");
-  if (f.no_rclick)           r.push("Right-click is disabled");
-  /* Fallback – even if no rule matches, still say 'High model score' */
-  if (r.length === 0)        r.push("High model score");
+  if (f.onmouseover_flag)    r.push("Contains onmouseover events");
+  if (f.no_rclick)           r.push("Right-click disabled");
+  if (r.length === 0)        r.push("Model score is high");
   return r;
 }
 
-
-/* Temp store + detection */
+/* 8) Temp store + detection */
 const stash = {};   // { tabId:{url:{}, dom:{}} }
 
 async function tryDetect(tabId) {
   const s = stash[tabId];
   if (!s || !s.url || !s.dom) return;
 
-  const f   = { ...s.url, ...s.dom };
-  const wl  = await whitelistPromise;
+  const f        = { ...s.url, ...s.dom };
+  const wl       = await whitelistPromise;
+  const hostRoot = getRootDomain(s.url.__host);
 
-  /* Whitelist */
-  if (wl.has(s.url.__host) && f.https_valid) {
+  /* Whitelist check */
+  if (wl.has(hostRoot) && f.https_valid) {
     updateUI(tabId, "safe");
-    chrome.tabs.sendMessage(tabId, { action:"setStatus", status:"safe", details:[] });
+    chrome.tabs.sendMessage(tabId, {
+      action: "setStatus",
+      status: "safe",
+      details: []
+    });
     delete stash[tabId];
     return;
   }
 
-  /* Model Prediction */
+  /* Model prediction */
   const label   = await classify(f);
   const details = label === "unsafe" ? explainReasons(f) : [];
 
   updateUI(tabId, label);
-  chrome.tabs.sendMessage(tabId, { action:"setStatus", status:label, details });
+  chrome.tabs.sendMessage(tabId, {
+    action: "setStatus",
+    status: label,
+    details
+  });
   delete stash[tabId];
 }
 
-/* Tab events */
+/* 9) Tab events */
 chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
   if (info.status === "loading") updateUI(tabId, "loading");
 
@@ -154,19 +175,19 @@ chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
   }
 });
 
-/* Listen DOM features */
+/* 10) Listen for DOM features */
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg.action === "domFeatures") {
     const id = sender.tab.id;
     stash[id] = stash[id] || {};
-    stash[id].dom = msg.data;
+    stash[id].dom = msg.data || {};
     tryDetect(id);
   } else if (msg.action === "togglePanel") {
-    chrome.tabs.sendMessage(sender.tab.id, { action:"togglePanel" });
+    chrome.tabs.sendMessage(sender.tab.id, { action: "togglePanel" });
   }
 });
 
-/* Toolbar click → toggle */
+/* 11) Toolbar click → toggle */
 chrome.action.onClicked.addListener(tab =>
-  chrome.tabs.sendMessage(tab.id, { action:"togglePanel" })
+  chrome.tabs.sendMessage(tab.id, { action: "togglePanel" })
 );
